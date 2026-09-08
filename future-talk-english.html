@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Future Talk English — Talk with Alex</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #12212E;
+    --bg-elevated: #1B2E3C;
+    --bg-input: #0E1920;
+    --text: #F3EFE7;
+    --text-dim: #9FB4BE;
+    --accent: #E8A33D;
+    --accent-dim: #7A5C2E;
+    --user-bubble: #2C4A57;
+    --alex-bubble: #1B2E3C;
+    --correction: #D9785A;
+    --success: #7FB88F;
+    --border: #2A3E4A;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, .display, .label { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+  button { font-family: inherit; cursor: pointer; }
+  #app { max-width: 480px; margin: 0 auto; height: 100vh; display: flex; flex-direction: column; position: relative; }
+
+  /* ---------- Orb ---------- */
+  .orb-wrap { display: flex; justify-content: center; align-items: center; padding: 18px 0 6px; }
+  .orb {
+    width: 76px; height: 76px; border-radius: 50%;
+    background: radial-gradient(circle at 32% 30%, #F4C878, var(--accent) 60%, var(--accent-dim) 100%);
+    position: relative; box-shadow: 0 0 0 rgba(232,163,61,0.0);
+    transition: box-shadow 0.4s ease;
+  }
+  .orb.big { width: 110px; height: 110px; }
+  .orb::before, .orb::after {
+    content: ""; position: absolute; inset: -14px; border-radius: 50%;
+    border: 1px solid rgba(232,163,61,0.35); opacity: 0;
+  }
+  .orb.speaking { box-shadow: 0 0 28px rgba(232,163,61,0.45); }
+  .orb.speaking::before { animation: ring 1.6s ease-out infinite; }
+  .orb.speaking::after { animation: ring 1.6s ease-out infinite 0.5s; }
+  .orb.listening { box-shadow: 0 0 22px rgba(127,184,143,0.5); }
+  @keyframes ring {
+    0% { opacity: 0.6; transform: scale(0.8); }
+    100% { opacity: 0; transform: scale(1.5); }
+  }
+
+  /* ---------- Start screen ---------- */
+  .screen { display: flex; flex-direction: column; height: 100%; padding: 0 20px 20px; overflow-y: auto; }
+  .hidden { display: none !important; }
+  .start-title { text-align: center; font-size: 26px; font-weight: 700; margin: 4px 0 2px; }
+  .start-sub { text-align: center; color: var(--text-dim); font-size: 13px; margin-bottom: 22px; letter-spacing: 0.2px; }
+  .section-label { font-size: 12px; color: var(--text-dim); margin: 18px 0 8px; }
+  .level-row { display: flex; gap: 8px; }
+  .pill {
+    flex: 1; text-align: center; padding: 10px 6px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text-dim);
+    font-size: 13px; font-weight: 500; transition: all 0.15s ease;
+  }
+  .pill.active { border-color: var(--accent); color: var(--accent); background: rgba(232,163,61,0.08); }
+  .topic-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .topic-card {
+    padding: 14px 10px; border-radius: 12px; border: 1px solid var(--border);
+    background: var(--bg-elevated); color: var(--text); font-size: 14px; text-align: left; font-weight: 500;
+  }
+  .topic-card.active { border-color: var(--accent); background: rgba(232,163,61,0.1); }
+  .topic-card small { display: block; color: var(--text-dim); font-size: 11px; margin-top: 2px; font-weight: 400; }
+  .start-btn {
+    margin-top: auto; padding-top: 20px;
+  }
+  .primary-btn {
+    width: 100%; padding: 15px; border-radius: 12px; border: none;
+    background: var(--accent); color: #1A1300; font-size: 15px; font-weight: 700;
+  }
+  .primary-btn:disabled { opacity: 0.4; }
+  .ghost-btn {
+    width: 100%; padding: 13px; border-radius: 12px; margin-top: 10px;
+    border: 1px solid var(--border); background: transparent; color: var(--text-dim); font-size: 14px;
+  }
+
+  /* ---------- Chat screen ---------- */
+  .chat-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 20px 0; font-size: 12px; color: var(--text-dim);
+  }
+  .chat-header .name { color: var(--text); font-weight: 700; font-size: 14px; }
+  .transcript {
+    flex: 1; overflow-y: auto; padding: 10px 18px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .bubble-row { display: flex; flex-direction: column; max-width: 84%; }
+  .bubble-row.alex { align-self: flex-start; }
+  .bubble-row.user { align-self: flex-end; align-items: flex-end; }
+  .bubble {
+    padding: 11px 14px; border-radius: 16px; font-size: 15px; line-height: 1.45;
+  }
+  .bubble-row.alex .bubble { background: var(--alex-bubble); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .bubble-row.user .bubble { background: var(--user-bubble); border-bottom-right-radius: 4px; }
+  .jp-line { font-size: 12px; color: var(--text-dim); margin-top: 4px; padding: 0 4px; }
+  .correction-chip {
+    margin-top: 6px; padding: 8px 12px; border-radius: 10px; font-size: 12.5px;
+    background: rgba(217,120,90,0.12); border: 1px solid rgba(217,120,90,0.4); color: #F0BCA9;
+    max-width: 100%;
+  }
+  .correction-chip b { color: var(--correction); }
+  .typing { color: var(--text-dim); font-size: 13px; padding: 0 18px 6px; }
+
+  /* ---------- Help panel ---------- */
+  .help-toggle {
+    text-align: center; padding: 6px 0; font-size: 12.5px; color: var(--accent); background: none; border: none;
+  }
+  .help-panel {
+    margin: 0 18px 8px; padding: 12px 14px; border-radius: 12px; background: var(--bg-elevated);
+    border: 1px solid var(--border); font-size: 13px; line-height: 1.6;
+  }
+  .help-panel .row { margin-bottom: 6px; }
+  .help-panel .row b { color: var(--accent); font-weight: 600; }
+  .word-chip { display: inline-block; background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 20px; margin: 2px 4px 0 0; font-size: 12px; }
+
+  /* ---------- Input bar ---------- */
+  .input-bar { display: flex; align-items: center; gap: 8px; padding: 10px 16px 18px; }
+  .text-input {
+    flex: 1; padding: 12px 14px; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--bg-input); color: var(--text); font-size: 15px; outline: none;
+  }
+  .text-input:focus { border-color: var(--accent); }
+  .mic-btn {
+    width: 46px; height: 46px; border-radius: 50%; border: none; flex-shrink: 0;
+    background: var(--bg-elevated); border: 1px solid var(--border); color: var(--text);
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .mic-btn.on { background: var(--success); color: #0E1920; border-color: var(--success); }
+  .send-btn {
+    width: 46px; height: 46px; border-radius: 50%; border: none; flex-shrink: 0;
+    background: var(--accent); color: #1A1300; font-size: 16px; font-weight: 700;
+  }
+  .send-btn:disabled { opacity: 0.35; }
+  .wait-msg { text-align: center; font-size: 11px; color: var(--text-dim); padding-bottom: 4px; }
+
+  /* ---------- Summary screen ---------- */
+  .summary-card {
+    background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; margin-bottom: 12px;
+  }
+  .summary-card .k { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+  .summary-card .v { font-size: 16px; font-weight: 600; }
+  .word-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .score-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
+  .stars { color: var(--accent); letter-spacing: 2px; }
+  .quote-box { font-style: italic; color: var(--text); font-size: 15px; border-left: 3px solid var(--accent); padding-left: 12px; margin-top: 4px; }
+
+  .setup-error { color: var(--correction); font-size: 12.5px; text-align: center; padding: 10px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ START SCREEN ============ -->
+  <div id="screen-start" class="screen">
+    <div class="orb-wrap"><div class="orb big" id="startOrb"></div></div>
+    <div class="start-title">Hi. I'm Alex.</div>
+    <div class="start-sub">Talk about the future. Learn English naturally.</div>
+
+    <div class="section-label">Your English level / レベル</div>
+    <div class="level-row" id="levelRow">
+      <button class="pill" data-level="Beginner">Beginner</button>
+      <button class="pill" data-level="Elementary">Elementary</button>
+      <button class="pill" data-level="Intermediate">Intermediate</button>
+    </div>
+
+    <div class="section-label">Topic / 話したいテーマ</div>
+    <div class="topic-grid" id="topicGrid"></div>
+
+    <div class="section-label">Alex's voice / 声を選ぶ</div>
+    <div style="display:flex; gap:8px;">
+      <select id="voiceSelect" class="text-input" style="flex:1; border-radius:10px;"></select>
+      <button id="voiceTestBtn" class="mic-btn" style="width:46px; flex-shrink:0;">🔊</button>
+    </div>
+    <div style="font-size:11.5px; color:var(--text-dim); margin-top:6px;">
+      端末に入っている声のリストです。低めの男性声を選ぶと落ち着いた雰囲気になります(実在の特定の人物の声は再現できません)
+    </div>
+
+    <div class="start-btn">
+      <button class="primary-btn" id="startBtn">Start Conversation</button>
+    </div>
+    <div id="setupError" class="setup-error hidden"></div>
+  </div>
+
+  <!-- ============ CHAT SCREEN ============ -->
+  <div id="screen-chat" class="screen hidden" style="padding:0;">
+    <div class="chat-header">
+      <div><span class="name">Alex</span> · AI Entrepreneur</div>
+      <div id="levelBadge">Beginner</div>
+    </div>
+    <div class="orb-wrap"><div class="orb" id="chatOrb"></div></div>
+    <div class="transcript" id="transcript"></div>
+    <div id="typingIndicator" class="typing hidden">Alex is typing…</div>
+
+    <button class="help-toggle" id="helpToggle">💡 困ったら見る (Help)</button>
+    <div id="helpPanel" class="help-panel hidden"></div>
+
+    <div class="input-bar">
+      <input type="text" id="textInput" class="text-input" placeholder="Type in English…" />
+      <button class="mic-btn" id="micBtn">🎤</button>
+      <button class="send-btn" id="sendBtn">➤</button>
+    </div>
+    <div class="wait-msg" id="waitMsg"></div>
+    <div style="padding: 0 16px 14px;">
+      <button class="ghost-btn" id="endBtn">End conversation</button>
+    </div>
+  </div>
+
+  <!-- ============ SUMMARY SCREEN ============ -->
+  <div id="screen-summary" class="screen hidden">
+    <h2 style="margin-top:18px;">Conversation Summary</h2>
+
+    <div class="summary-card">
+      <div class="k">Today's topic</div>
+      <div class="v" id="sumTopic">—</div>
+    </div>
+    <div class="summary-card">
+      <div class="k">You spoke</div>
+      <div class="v" id="sumCount">0 sentences</div>
+    </div>
+    <div class="summary-card">
+      <div class="k">New words</div>
+      <div class="word-list" id="sumWords"></div>
+    </div>
+    <div class="summary-card">
+      <div class="k">One useful sentence</div>
+      <div class="quote-box" id="sumSentence">—</div>
+    </div>
+    <div class="summary-card">
+      <div class="score-row"><span>Grammar</span><span class="stars" id="scoreGrammar">—</span></div>
+      <div class="score-row"><span>Naturalness</span><span class="stars" id="scoreNatural">—</span></div>
+      <div class="score-row"><span>Vocabulary</span><span class="stars" id="scoreVocab">—</span></div>
+      <div id="sumComment" style="font-size:13px; color:var(--text-dim); margin-top:8px;"></div>
+    </div>
+
+    <button class="primary-btn" id="talkAgainBtn">Talk Again</button>
+    <button class="ghost-btn" id="newTopicBtn">New Topic</button>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   Future Talk English — MVP
+   キャラクター「Alex」は完全オリジナル。実在人物は再現しない。
+   会話生成: Claude API (このアーティファクト内蔵、キー設定不要)
+   音声認識/音声合成: ブラウザ標準のWeb Speech API を使用
+   （利用できない環境では自動的にテキスト入力のみで動作します）
+   ============================================================ */
+
+const TOPICS = [
+  { id: "Future",    label: "Future",    jp: "未来について" },
+  { id: "AI",        label: "AI",        jp: "AIについて" },
+  { id: "Space",     label: "Space",     jp: "宇宙・火星について" },
+  { id: "Robots",    label: "Robots",    jp: "ロボットについて" },
+  { id: "Business",  label: "Business",  jp: "会社・起業について" },
+  { id: "Money",     label: "Money",     jp: "お金・投資について" },
+  { id: "DailyLife", label: "Daily Life",jp: "日常生活" },
+  { id: "FreeTalk",  label: "Free Talk", jp: "Alexにおまかせ" },
+];
+
+let state = {
+  level: "Beginner",
+  topic: null,
+  history: [],       // [{role:'alex'|'user', text, jp, correction, help}]
+  userSentenceCount: 0,
+  learnedWords: [],  // [{en, jp}]
+  isBusy: false,
+};
+
+// ---------- Persistent storage (falls back silently if unavailable) ----------
+async function saveStat(delta) {
+  try {
+    if (!window.storage) return;
+    let existing = { conversations: 0, totalSentences: 0 };
+    try {
+      const r = await window.storage.get('futuretalk:stats');
+      if (r && r.value) existing = JSON.parse(r.value);
+    } catch (e) {}
+    existing.conversations = (existing.conversations || 0) + (delta.conversations || 0);
+    existing.totalSentences = (existing.totalSentences || 0) + (delta.totalSentences || 0);
+    await window.storage.set('futuretalk:stats', JSON.stringify(existing));
+  } catch (e) { /* storage not available in this environment — that's fine */ }
+}
+
+// ---------- UI: Level selector ----------
+document.querySelectorAll('#levelRow .pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#levelRow .pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.level = btn.dataset.level;
+  });
+});
+document.querySelector('#levelRow .pill[data-level="Beginner"]').classList.add('active');
+
+// ---------- UI: Topic grid ----------
+const topicGrid = document.getElementById('topicGrid');
+TOPICS.forEach(t => {
+  const card = document.createElement('button');
+  card.className = 'topic-card';
+  card.innerHTML = `${t.label}<small>${t.jp}</small>`;
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.topic-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    state.topic = t;
+  });
+  topicGrid.appendChild(card);
+});
+
+// ---------- Start conversation ----------
+document.getElementById('startBtn').addEventListener('click', () => {
+  if (!state.topic) {
+    // default to Free Talk if nothing chosen
+    state.topic = TOPICS[TOPICS.length - 1];
+  }
+  showScreen('chat');
+  document.getElementById('levelBadge').textContent = state.level;
+  sendToAlex(null); // null = Alex opens the conversation
+});
+
+function showScreen(name) {
+  ['start', 'chat', 'summary'].forEach(s => {
+    document.getElementById('screen-' + s).classList.toggle('hidden', s !== name);
+  });
+}
+
+// ============================================================
+// Claude API call helper
+// ============================================================
+async function callClaude(systemPrompt, userPrompt) {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 700,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+    })
+  });
+  const data = await response.json();
+  const text = (data.content || []).map(b => b.text || "").join("\n");
+  const clean = text.replace(/```json|```/g, "").trim();
+  return JSON.parse(clean);
+}
+
+function alexSystemPrompt() {
+  return `You are "Alex," a completely original, fictional AI-entrepreneur character inside an English-conversation practice app for Japanese learners. Alex runs a robotics company and a space venture, is thoughtful, curious about the future, digs a little deeper into what the user says, asks occasional unusual questions, never mocks the user, is very gentle and patient with beginners, doesn't over-explain, and often uses short follow-ups like "Why?", "Really?", "What do you think?".
+
+IMPORTANT: Alex is NOT based on any real person. Never mention, imitate, or imply any real celebrity, executive, or public figure by name or identifiable biographical detail, even loosely. Keep all facts and opinions generic/fictional to the "Alex" character.
+
+Current learner level: ${state.level}
+Current topic: ${state.topic.label} (${state.topic.jp})
+
+Level rules:
+- Beginner: 1 very short sentence, simple everyday words, one question at a time, no idioms.
+- Elementary: 1-2 short sentences, common vocabulary.
+- Intermediate: natural pace, 2-3 sentences, more complex structure allowed.
+
+You will be given the conversation so far and the learner's latest message (may contain small transcription/grammar errors). Reply with ONLY a single JSON object — no markdown fences, no extra text — matching exactly this schema:
+
+{
+  "reply": "Alex's next English message, continuing the conversation naturally and digging into the learner's last answer when relevant.",
+  "correction": {
+    "hasError": boolean,
+    "corrected": "the learner's sentence rewritten correctly (empty string if hasError is false)",
+    "reason_jp": "one short, gentle Japanese explanation of the fix (empty string if hasError is false)"
+  },
+  "help": {
+    "meaning_jp": "Japanese translation of Alex's reply above",
+    "possible_answer": "one simple example English answer the learner could give next",
+    "useful_words": [{"en": "word", "jp": "meaning"}]
+  },
+  "suggestedLevel": "Beginner" | "Elementary" | "Intermediate"
+}
+
+Keep "useful_words" to at most 3 entries, relevant to this exchange. Never grade harshly and never lecture — one gentle correction max per turn, then keep the conversation moving.`;
+}
+
+async function sendToAlex(userText) {
+  if (state.isBusy) return;
+  state.isBusy = true;
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('typingIndicator').classList.remove('hidden');
+  document.getElementById('waitMsg').textContent = '';
+
+  if (userText) {
+    addBubble('user', userText);
+    state.userSentenceCount++;
+  }
+
+  const transcriptText = state.history
+    .map(h => (h.role === 'alex' ? 'Alex: ' : 'Learner: ') + h.text)
+    .join('\n');
+  const prompt = userText
+    ? `Conversation so far:\n${transcriptText}\n\nLearner's latest message: "${userText}"\n\nRespond as Alex following the schema.`
+    : `This is the very start of the conversation. Alex should greet the learner briefly and ask one simple opening question about the topic, following the schema.`;
+
+  try {
+    const result = await callClaude(alexSystemPrompt(), prompt);
+
+    document.getElementById('typingIndicator').classList.add('hidden');
+    addBubble('alex', result.reply, result.jpShown ? null : result.help?.meaning_jp);
+
+    // show correction chip on the learner's own bubble
+    if (userText && result.correction && result.correction.hasError) {
+      attachCorrection(result.correction);
+    }
+
+    // store help + speak
+    state.lastHelp = result.help;
+    speak(result.reply);
+
+    if (result.suggestedLevel && result.suggestedLevel !== state.level) {
+      state.level = result.suggestedLevel;
+      document.getElementById('levelBadge').textContent = state.level + ' (auto)';
+    }
+    if (result.help && Array.isArray(result.help.useful_words)) {
+      result.help.useful_words.forEach(w => {
+        if (w.en && !state.learnedWords.find(x => x.en.toLowerCase() === w.en.toLowerCase())) {
+          state.learnedWords.push(w);
+        }
+      });
+    }
+  } catch (err) {
+    document.getElementById('typingIndicator').classList.add('hidden');
+    document.getElementById('waitMsg').textContent = '接続エラーが発生しました。もう一度送信してみてください。';
+    console.error(err);
+  } finally {
+    state.isBusy = false;
+    document.getElementById('sendBtn').disabled = false;
+  }
+}
+
+// ---------- Transcript rendering ----------
+function addBubble(role, text, jpLine) {
+  state.history.push({ role, text });
+  const row = document.createElement('div');
+  row.className = 'bubble-row ' + role;
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.textContent = text;
+  row.appendChild(bubble);
+  if (jpLine) {
+    const jp = document.createElement('div');
+    jp.className = 'jp-line';
+    jp.textContent = jpLine;
+    row.appendChild(jp);
+  }
+  row.dataset.role = role;
+  document.getElementById('transcript').appendChild(row);
+  document.getElementById('transcript').scrollTop = 999999;
+  return row;
+}
+
+function attachCorrection(correction) {
+  const rows = document.querySelectorAll('#transcript .bubble-row.user');
+  const lastRow = rows[rows.length - 1];
+  if (!lastRow) return;
+  const chip = document.createElement('div');
+  chip.className = 'correction-chip';
+  chip.innerHTML = `<b>${escapeHtml(correction.corrected)}</b><br>${escapeHtml(correction.reason_jp)}`;
+  lastRow.appendChild(chip);
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+// ---------- Help panel ----------
+document.getElementById('helpToggle').addEventListener('click', () => {
+  const panel = document.getElementById('helpPanel');
+  const h = state.lastHelp;
+  if (!h) { panel.innerHTML = '会話が始まると、ここにヒントが表示されます。'; }
+  else {
+    panel.innerHTML = `
+      <div class="row"><b>Meaning:</b> ${escapeHtml(h.meaning_jp)}</div>
+      <div class="row"><b>Possible answer:</b> "${escapeHtml(h.possible_answer)}"</div>
+      <div class="row"><b>Useful words:</b><br>
+        ${(h.useful_words||[]).map(w => `<span class="word-chip">${escapeHtml(w.en)} = ${escapeHtml(w.jp)}</span>`).join('')}
+      </div>`;
+  }
+  panel.classList.toggle('hidden');
+});
+
+// ---------- Text input send ----------
+document.getElementById('sendBtn').addEventListener('click', submitTextInput);
+document.getElementById('textInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitTextInput();
+});
+function submitTextInput() {
+  const input = document.getElementById('textInput');
+  const val = input.value.trim();
+  if (!val || state.isBusy) return;
+  input.value = '';
+  sendToAlex(val);
+}
+
+// ---------- Speech recognition (STT) — graceful fallback if unavailable ----------
+let recognition = null;
+const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SpeechRecognitionAPI) {
+  recognition = new SpeechRecognitionAPI();
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.onresult = (e) => {
+    const text = e.results[0][0].transcript;
+    document.getElementById('textInput').value = text;
+    sendToAlex(text);
+  };
+  recognition.onend = () => setMicState(false);
+  recognition.onerror = () => {
+    setMicState(false);
+    document.getElementById('waitMsg').textContent = 'マイクが使えませんでした。テキストで入力してください。';
+  };
+} else {
+  document.getElementById('micBtn').addEventListener('click', () => {
+    document.getElementById('waitMsg').textContent = 'この環境では音声入力が使えません。テキストで入力してください。';
+  });
+}
+
+let micOn = false;
+function setMicState(on) {
+  micOn = on;
+  document.getElementById('micBtn').classList.toggle('on', on);
+  document.getElementById('chatOrb').classList.toggle('listening', on);
+}
+if (recognition) {
+  document.getElementById('micBtn').addEventListener('click', () => {
+    if (state.isBusy) return;
+    if (micOn) { recognition.stop(); return; }
+    try { recognition.start(); setMicState(true); }
+    catch (e) { /* already started */ }
+  });
+}
+
+// ---------- Speech synthesis (TTS) ----------
+function speak(text, forcedVoiceURI) {
+  if (!('speechSynthesis' in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'en-US';
+    utter.rate = state.level === 'Beginner' ? 0.82 : 0.92;
+    utter.pitch = 0.78; // lower pitch = calmer / more masculine-leaning tone on most engines
+
+    const voices = window.speechSynthesis.getVoices();
+    const wantURI = forcedVoiceURI || state.selectedVoiceURI;
+    let chosen = wantURI ? voices.find(v => v.voiceURI === wantURI) : null;
+    if (!chosen) {
+      chosen = voices.find(v => v.lang.startsWith('en') && /male/i.test(v.name)) ||
+               voices.find(v => v.lang.startsWith('en'));
+    }
+    if (chosen) utter.voice = chosen;
+
+    const orb = document.getElementById(forcedVoiceURI ? 'startOrb' : 'chatOrb');
+    if (orb) {
+      utter.onstart = () => orb.classList.add('speaking');
+      utter.onend = () => orb.classList.remove('speaking');
+    }
+    window.speechSynthesis.speak(utter);
+  } catch (e) { /* TTS not available — text is still shown */ }
+}
+
+// ---------- Voice picker (start screen) ----------
+function populateVoiceList() {
+  if (!('speechSynthesis' in window)) return;
+  const select = document.getElementById('voiceSelect');
+  const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+  if (!voices.length) return;
+  select.innerHTML = '';
+  voices.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.voiceURI;
+    const hint = /male/i.test(v.name) ? ' (male)' : /female/i.test(v.name) ? ' (female)' : '';
+    opt.textContent = v.name + hint;
+    select.appendChild(opt);
+  });
+  // default to a male-labelled voice if one exists
+  const male = voices.find(v => /male/i.test(v.name) && !/female/i.test(v.name));
+  if (male) select.value = male.voiceURI;
+  state.selectedVoiceURI = select.value;
+}
+if ('speechSynthesis' in window) {
+  populateVoiceList();
+  window.speechSynthesis.onvoiceschanged = populateVoiceList;
+}
+document.getElementById('voiceSelect').addEventListener('change', (e) => {
+  state.selectedVoiceURI = e.target.value;
+});
+document.getElementById('voiceTestBtn').addEventListener('click', () => {
+  speak("Hi. I'm Alex. Let's talk about the future.", document.getElementById('voiceSelect').value);
+});
+
+// ---------- End conversation → summary ----------
+document.getElementById('endBtn').addEventListener('click', finishConversation);
+
+async function finishConversation() {
+  if (state.userSentenceCount === 0) { showScreen('start'); return; }
+
+  document.getElementById('sumTopic').textContent = `${state.topic.label} — ${state.topic.jp}`;
+  document.getElementById('sumCount').textContent = `${state.userSentenceCount} sentences`;
+  document.getElementById('sumWords').innerHTML = state.learnedWords
+    .map(w => `<span class="word-chip">${escapeHtml(w.en)}</span>`).join('') || '—';
+  document.getElementById('sumSentence').textContent = '…';
+  document.getElementById('scoreGrammar').textContent = '…';
+  document.getElementById('scoreNatural').textContent = '…';
+  document.getElementById('scoreVocab').textContent = '…';
+  document.getElementById('sumComment').textContent = '';
+
+  showScreen('summary');
+  await saveStat({ conversations: 1, totalSentences: state.userSentenceCount });
+
+  const transcriptText = state.history.map(h => (h.role === 'alex' ? 'Alex: ' : 'Learner: ') + h.text).join('\n');
+  const summarySystem = `You are scoring a short English-practice conversation between "Alex" (an AI character) and a Japanese-speaking English learner. Be encouraging and never harsh, especially with beginners. Respond with ONLY a JSON object matching:
+{
+  "grammarScore": 1-5,
+  "naturalnessScore": 1-5,
+  "vocabularyScore": 1-5,
+  "usefulSentence": "one complete English sentence the learner produced or could easily produce, worth remembering",
+  "comment_jp": "one short, warm, encouraging sentence in Japanese, no criticism"
+}`;
+  try {
+    const summary = await callClaude(summarySystem, `Transcript:\n${transcriptText}\n\nLearner level: ${state.level}`);
+    document.getElementById('sumSentence').textContent = summary.usefulSentence || '—';
+    document.getElementById('scoreGrammar').textContent = stars(summary.grammarScore);
+    document.getElementById('scoreNatural').textContent = stars(summary.naturalnessScore);
+    document.getElementById('scoreVocab').textContent = stars(summary.vocabularyScore);
+    document.getElementById('sumComment').textContent = summary.comment_jp || '';
+  } catch (e) {
+    document.getElementById('sumSentence').textContent = '(取得できませんでした)';
+  }
+}
+function stars(n) {
+  n = Math.max(1, Math.min(5, Math.round(n || 3)));
+  return '★'.repeat(n) + '☆'.repeat(5 - n);
+}
+
+// ---------- Summary screen buttons ----------
+document.getElementById('talkAgainBtn').addEventListener('click', () => {
+  resetConversation(false);
+  showScreen('chat');
+  sendToAlex(null);
+});
+document.getElementById('newTopicBtn').addEventListener('click', () => {
+  resetConversation(true);
+  showScreen('start');
+});
+function resetConversation(clearTopic) {
+  state.history = [];
+  state.userSentenceCount = 0;
+  state.learnedWords = [];
+  state.lastHelp = null;
+  document.getElementById('transcript').innerHTML = '';
+  document.getElementById('helpPanel').classList.add('hidden');
+  if (clearTopic) {
+    document.querySelectorAll('.topic-card').forEach(c => c.classList.remove('active'));
+    state.topic = null;
+  }
+}
+</script>
+</body>
+</html>
